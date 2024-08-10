@@ -4,34 +4,69 @@ from selenium import webdriver
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+import tkinter as tk
+import threading as th
 
-driver = webdriver.Chrome()
-try:
+
+searchQuery=""
+flag=True
+def automationSearch(searchQuery):
     driver = webdriver.Chrome()
-    driver.get('http://www.youtube.com')
-    driver.maximize_window()
-    time.sleep(1)
-    search = driver.find_element(By.XPATH,'//input[@id="search"]')
-    searchBTN = driver.find_element(By.XPATH,'//*[@id="search-icon-legacy"]')
-    searchQuery="python automation and scrapping using selenium" #input()
-    search.send_keys(searchQuery)
-    time.sleep(2)
-    searchBTN.send_keys(Keys.RETURN)
-    time.sleep(5)
-    searchResults = driver.find_elements(By.CSS_SELECTOR,value='.ytd-item-section-renderer ytd-video-renderer h3 a yt-formatted-string')
-    searchResultsLinks = driver.find_elements(By.CSS_SELECTOR,value='.ytd-item-section-renderer ytd-video-renderer h3 a')
-    keys=[]
-    values=[]
-    for searchResult in searchResults:
-        keys.append(searchResult.text)
-    for searchResultLink in searchResultsLinks:
-        values.append(searchResultLink.get_attribute("href"))
-    merged_dict = dict(zip(keys, values))
-    with open('file.txt', 'w') as file:
-        file.write(json.dumps(merged_dict))
-    print("Successfully written in a file, Page title is:", driver.title)
-except:
-    print("some error")
-    driver.quit()
-finally:
-    driver.quit()
+    try:
+        driver.get('http://www.youtube.com')
+        driver.maximize_window()
+        time.sleep(1)
+        search = driver.find_element(By.XPATH,'//input[@id="search"]')
+        searchBTN = driver.find_element(By.XPATH,'//*[@id="search-icon-legacy"]')
+        search.send_keys(searchQuery)
+        time.sleep(2)
+        searchBTN.send_keys(Keys.RETURN)
+        time.sleep(5)
+        searchResults = driver.find_elements(By.CSS_SELECTOR,value='.ytd-item-section-renderer ytd-video-renderer h3 a yt-formatted-string')
+        searchResultsLinks = driver.find_elements(By.CSS_SELECTOR,value='.ytd-item-section-renderer ytd-video-renderer h3 a')
+        keys=[]
+        values=[]
+        for searchResult in searchResults:
+            keys.append(searchResult.text)
+        for searchResultLink in searchResultsLinks:
+            values.append(searchResultLink.get_attribute("href"))
+        merged_dict = dict(zip(keys, values))
+        with open('links.json', 'a') as file:
+            file.write(json.dumps(merged_dict))
+    except:
+        print("some error while scrapping")
+        driver.quit()
+    finally:
+        global flag
+        flag=False
+        driver.quit()
+
+def ui():
+    window = tk.Tk()
+    window.title("YouTube Video Link Saver")
+    window.geometry('350x200')
+    dispMessage=tk.Label(window, text="Enter Search Query")
+    dispMessage.grid(column=0, row=0)
+    inputQuery=tk.Entry(window, width=35)
+    inputQuery.grid(column=1, row=0)
+    def on_button_click():
+        searchQuery = inputQuery.get()
+        dispProcess=tk.Label(window, text="Searching...")
+        dispProcess.grid(column=1, row=2)
+        thread2=th.Thread(target=automationSearch, args=(searchQuery,))
+        thread2.start()
+        def showProcess():
+            dispProcess.configure(text="Searching..")
+            print(flag)
+            if (flag):
+                window.after(1000, showProcess)
+            else:
+                dispConfirmation="Saved Successfully in links.json file"
+                dispProcess.configure(text=dispConfirmation)
+        showProcess()
+    btn=tk.Button(window, text="Search", command=on_button_click)
+    btn.grid(column=1, row=1)
+    window.mainloop()
+thread1=th.Thread(target=ui, args=())
+thread1.start()
+thread1.join()
